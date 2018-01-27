@@ -2,8 +2,8 @@ require 'json'
 require 'net/http'
 require 'net/https'
 require 'base64'
-require './commands'
-require './errors'
+require_relative 'commands'
+require_relative 'errors'
 
 module XP
   module RPC
@@ -36,15 +36,15 @@ module XP
       def sendrpc(command,*args)
         rpcData = {
           id: (Time.now.to_f * 1000).to_i,
-          method: command.downcase
+          method: command.downcase,
           params: args
           }.to_json
         
         options = @opts
         
-        http = Net::HTTP.new(options.host,options.port)
+        http = Net::HTTP.new(options[:host],options[:port])
         req = nil
-        if options.method.upcase == "POST"
+        if options[:method].upcase == "POST"
           req = Net::HTTP::Post.new("/")
           req.body = rpcData
           req["Content-Type"] = "application/json"
@@ -57,7 +57,7 @@ module XP
           raise #GET not support...
         end
         
-        if options.https == true
+        if options[:https] == true
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         end
@@ -66,30 +66,28 @@ module XP
         data = nil
         errmsg = nil
         begin
-          data = JSON.parse(res)
+          data = JSON.parse(res.body)
         rescue
-          if res.code.to_i !== 200
+          if res.code.to_i != 200
             errmsg = "Invalid params #{res.code}"
           else
             errmsg = "Failed to parse JSON"
           end
-          errmsg += " : #{res.to_json}"
+          errmsg += " : #{res.body.to_json}"
           puts errmsg
           return false
         end
         
         if data["error"]
           errcode = data['error']['code'].to_i
-          if errcode == XP::RPC::Error::RPC_WALLET_UNLOCK_NEEDED && options['passphrasecallback']
-            return self.unlock(command,*args)
-          else
-            errcode = 
+          # if errcode == XP::RPC::Error::RPC_WALLET_UNLOCK_NEEDED && options['passphrasecallback']
+          #   return self.unlock(command,*args) 
+          #else
             errname = XP::RPC::Error.constants.select{|x| XP::RPC::Error.const_get(x) == errcode}[0].to_s
             puts "Command error : #{errname}(#{errcode})"
-            return false
-          end
+          #end
         end
-        return true
+        return data
       end
       
       def execrpc(command,*args)
@@ -120,11 +118,11 @@ module XP
           return
         end
         
-        k = k.downcase
+        k = k.to_s.downcase.to_sym
         if @opts.has_key?(k)
           @opts[k] = v
           if /^(user|pass)$/ =~ k
-            self.auth(@opts.user,@opts.pass)
+            self.auth(@opts[:user],@opts[:pass])
           end
         end
         return self
@@ -134,7 +132,7 @@ module XP
         if @opts[k] == false
           return false
         else
-          if @opts[k] !== false
+          if @opts[k] != false
             return @opts[k.downcase]
           else
             return nil
