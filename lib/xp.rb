@@ -11,7 +11,7 @@ module XP
       def initialize(options)
         @opts = {
           host:   'localhost',
-          port:   28191,
+          port:   19325,
           method: 'POST',
           user: '',
           pass: '',
