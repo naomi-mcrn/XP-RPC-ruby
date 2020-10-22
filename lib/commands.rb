@@ -84,7 +84,11 @@ module XP
     ]
     
     def self.command?(cmd)
-      COMMANDS.include?(cmd.downcase)
+      # allow any command.
+      # this may cause unexpected behavior or dangerous situation
+      
+      # COMMANDS.include?(cmd.downcase)
+      true
     end
   end
 end
